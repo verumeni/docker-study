@@ -1,0 +1,31 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/app
+      - /app/node_modules # ホストの影響をうけない
+    environment:
+      PORT: 3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    command: npm run dev
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: storage
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
+volumes:
+  redis_data:
