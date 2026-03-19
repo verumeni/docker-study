@@ -1,0 +1,74 @@
+# 共通設定
+x-app-common: &app-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  working_dir: /app
+  depends_on:
+    - redis
+
+services:
+  app:
+    <<: *app-common
+    container_name: step8-app
+    profiles: ["normal"]
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      WRITE_PROBE_PATH: /tmp/probe.txt
+    command: ["npm", "start"]
+
+  app_fail_startup:
+    <<: *app-common
+    container_name: step8-app-fail-startup
+    profiles: ["fail-startup"]
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      WRITE_PROBE_PATH: /tmp/probe.txt
+    command: ["npm", "run", "start:missing"] # 意図的に失敗
+
+  app_fail_connectivity:
+    <<: *app-common
+    container_name: step8-app-fail-connectivity
+    profiles: ["fail-connectivity"]
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      REDIS_HOST: redis-bad # 意図的に誤設定
+      REDIS_PORT: 6379
+      WRITE_PROBE_PATH: /tmp/probe.txt
+    command: ["npm", "start"]
+
+  app_fail_permission:
+    <<: *app-common
+    container_name: step8-app-fail-permission
+    profiles: ["fail-permission"]
+    ports:
+      - "3000:3000"
+    user: "1000:1000" # UID
+    environment:
+      PORT: 3000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      WRITE_PROBE_PATH: /root/probe.txt # 非rootユーザーで書込不可を狙う
+    command: ["npm", "start"]
+
+  redis:
+    image: redis:7-alpine
+    container_name: step8-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+
+volumes:
+  redis_data:
